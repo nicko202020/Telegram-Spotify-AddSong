@@ -1,0 +1,278 @@
+{
+  "name": "Spotify song adder",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "chatIds": ""
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -20
+      ],
+      "id": "52b1c871-1456-4fa7-9423-deeefe267f9d",
+      "name": "Telegram Trigger",
+      "webhookId": "9a30b9c7-f380-4411-996b-6e5df09ca0c8",
+      "credentials": {
+        "telegramApi": {
+          "id": "LkSCCkY9dzv4HjPb",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[3].file_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        -20
+      ],
+      "id": "3c7e38d0-8473-4037-9ebc-66eb88200e78",
+      "name": "Telegram",
+      "webhookId": "6a754432-55e1-4c05-b842-242bc0279dd3",
+      "credentials": {
+        "telegramApi": {
+          "id": "LkSCCkY9dzv4HjPb",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "Use OCR to get the text in the image.\nThen find the song title and artist in the image\n\nUse commonly used characters such as \"-\" or \":\" which seperate the song title from the artist name\n\nYour output should only be the song title, and artist. If unavailable reply with \"UNAVAILABLE\" only.",
+        "inputType": "base64",
+        "simplify": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        660,
+        -20
+      ],
+      "id": "3ae08fcc-a602-46b0-9461-b6023ecf835f",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "CZrisPsEKUrTbpKx",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "rotate",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        440,
+        -20
+      ],
+      "id": "4f3eb62f-71a9-473f-9eb5-626806546e4e",
+      "name": "Edit Image"
+    },
+    {
+      "parameters": {
+        "url": "https://api.spotify.com/v1/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.choices[0].message.content }}"
+            },
+            {
+              "name": "type",
+              "value": "track"
+            },
+            {
+              "name": "limit",
+              "value": "3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -20
+      ],
+      "id": "321bbbf3-778d-4bc5-90a3-2f7f789ad967",
+      "name": "HTTP Request",
+      "credentials": {
+        "spotifyOAuth2Api": {
+          "id": "WHhfYb19ZrktbTSg",
+          "name": "Spotify account"
+        },
+        "oAuth2Api": {
+          "id": "khnUg9JFX6ZfZNp7",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6e3cf9a8-205f-4125-985c-ccc7a006ff42",
+              "leftValue": "={{ $json.tracks.items[0].album.artists[0].name }}",
+              "rightValue": "={{ $('OpenAI').item.json.content }}",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        -20
+      ],
+      "id": "28a61bd8-2b83-4ae8-b4ab-88c363276903",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.spotify.com/v1/playlists/14KaYG3mQWGdGBKEduR1uY/tracks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"uris\": [\n    \"{{ $json.tracks.items[0].uri }}\"\n  ],\n  \"position\": 0\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -20
+      ],
+      "id": "8a17a205-7868-4ea6-a21a-34b3d484c6c1",
+      "name": "HTTP Request1",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "khnUg9JFX6ZfZNp7",
+          "name": "Unnamed credential"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram": {
+      "main": [
+        [
+          {
+            "node": "Edit Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Image": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2571acae-8fa1-4d64-8a0a-f5d82b0f3b16",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "10574ae5ffb28c42480ed0b60891274d0724f1c23fc569f048f0c47fed199bed"
+  },
+  "id": "f98yEgLLgwzuTIbE",
+  "tags": []
+}
